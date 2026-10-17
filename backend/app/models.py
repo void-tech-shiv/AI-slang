@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 
 Tone = Literal["casual", "slang", "romantic", "funny", "aggressive", "gen-z"]
+Mode = Literal["standard", "couple", "gaming", "meme"]
 
 
 class TranslateRequest(BaseModel):
@@ -12,6 +13,8 @@ class TranslateRequest(BaseModel):
     target_language: str = Field(default="Telugu", min_length=2, max_length=40)
     region: str = Field(default="Vijayawada", min_length=2, max_length=60)
     tone: Tone = "slang"
+    mode: Mode = "standard"
+    context: list[str] = Field(default_factory=list, max_length=8)
 
 
 class TranslateResponse(BaseModel):
@@ -28,6 +31,7 @@ class RegisterRequest(BaseModel):
     language: str = Field(default="Hinglish", min_length=2, max_length=40)
     region: str = Field(default="General", min_length=2, max_length=60)
     tone: Tone = "slang"
+    mode: Mode = "standard"
 
 
 class LoginRequest(BaseModel):
@@ -44,6 +48,7 @@ class PreferencesUpdate(BaseModel):
     language: str = Field(min_length=2, max_length=40)
     region: str = Field(min_length=2, max_length=60)
     tone: Tone
+    mode: Mode = "standard"
 
 
 class UserPublic(BaseModel):
@@ -52,6 +57,7 @@ class UserPublic(BaseModel):
     language: str
     region: str
     tone: str
+    mode: str = "standard"
 
 
 class MessagePublic(BaseModel):

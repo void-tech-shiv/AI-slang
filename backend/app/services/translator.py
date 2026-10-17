@@ -25,6 +25,7 @@ DEMO_TRANSLATIONS = {
     "bhai kidhar hai?": ("Ra ekkada unnav?", "casual"),
     "bhai kidhar hai": ("Ra ekkada unnav?", "casual"),
     "kal bunk kare?": ("Repu bunk cheddama?", "casual"),
+    "left se push kar": ("Left nundi push chey ra", "urgent"),
 }
 
 
@@ -33,27 +34,19 @@ def _demo_translate(text: str, target_language: str) -> TranslationResult:
     if target_language.lower() == "telugu" and key in DEMO_TRANSLATIONS:
         translated, emotion = DEMO_TRANSLATIONS[key]
         return TranslationResult(translated, emotion, "demo")
-
-    return TranslationResult(
-        translated=f"[Demo mode] {text}",
-        emotion="neutral",
-        provider="demo",
-    )
+    return TranslationResult(translated=f"[Demo mode] {text}", emotion="neutral", provider="demo")
 
 
 def _parse_output(output: str) -> tuple[str, str]:
     translation = ""
     emotion = "neutral"
-
     for line in output.strip().splitlines():
         if line.upper().startswith("TRANSLATION:"):
             translation = line.split(":", 1)[1].strip()
         elif line.upper().startswith("EMOTION:"):
             emotion = line.split(":", 1)[1].strip().lower()
-
     if not translation:
         translation = re.sub(r"^TRANSLATION:\s*", "", output.strip(), flags=re.I)
-
     return translation or output.strip(), emotion or "neutral"
 
 
@@ -64,6 +57,8 @@ def translate_message(
     target_language: str,
     region: str,
     tone: str,
+    mode: str = "standard",
+    context: list[str] | None = None,
 ) -> TranslationResult:
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
@@ -77,12 +72,9 @@ def translate_message(
         target_language=target_language,
         region=region,
         tone=tone,
+        mode=mode,
+        context=context,
     )
-
-    response = client.responses.create(
-        model=model,
-        input=prompt,
-    )
-
+    response = client.responses.create(model=model, input=prompt)
     translated, emotion = _parse_output(response.output_text)
     return TranslationResult(translated, emotion, "openai")

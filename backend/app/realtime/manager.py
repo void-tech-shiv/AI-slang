@@ -9,6 +9,7 @@ class ClientProfile:
     language: str
     region: str
     tone: str
+    mode: str = "standard"
 
 
 @dataclass

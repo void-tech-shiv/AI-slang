@@ -28,7 +28,7 @@ load_dotenv()
 app = FastAPI(
     title="AI Slang Translator API",
     description="Natural Indian slang and tone-preserving translation API.",
-    version="0.4.0",
+    version="0.5.0",
 )
 
 frontend_origin = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
@@ -48,12 +48,13 @@ def public_user(user: dict) -> UserPublic:
         language=user.get("language", "Hinglish"),
         region=user.get("region", "General"),
         tone=user.get("tone", "slang"),
+        mode=user.get("mode", "standard"),
     )
 
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {"message": "AI Slang Translator API", "phase": "4-voice", "storage": store.mode}
+    return {"message": "AI Slang Translator API", "phase": "5-context-modes", "storage": store.mode}
 
 
 @app.get("/health")
@@ -70,6 +71,8 @@ def translate(payload: TranslateRequest) -> TranslateResponse:
             target_language=payload.target_language,
             region=payload.region,
             tone=payload.tone,
+            mode=payload.mode,
+            context=payload.context,
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Translation service failed") from exc
@@ -98,6 +101,7 @@ async def register(payload: RegisterRequest) -> TokenResponse:
             "language": payload.language,
             "region": payload.region,
             "tone": payload.tone,
+            "mode": payload.mode,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
     )
@@ -185,6 +189,7 @@ async def _resolve_socket_profile(websocket: WebSocket) -> ClientProfile:
                 language=user.get("language", "English"),
                 region=user.get("region", "General"),
                 tone=user.get("tone", "slang"),
+                mode=user.get("mode", "standard"),
             )
 
     return ClientProfile(
@@ -192,6 +197,7 @@ async def _resolve_socket_profile(websocket: WebSocket) -> ClientProfile:
         language=websocket.query_params.get("language", "English")[:40],
         region=websocket.query_params.get("region", "General")[:60],
         tone=websocket.query_params.get("tone", "slang")[:20],
+        mode=websocket.query_params.get("mode", "standard")[:20],
     )
 
 
@@ -218,6 +224,8 @@ async def _broadcast_message(
             emotion = "original"
             provider = "local"
         else:
+            history = await store.get_messages(room_id, 8)
+            context = [item["original"] for item in history[:-1]]
             result = await asyncio.to_thread(
                 translate_message,
                 text=text,
@@ -225,6 +233,8 @@ async def _broadcast_message(
                 target_language=connected.profile.language,
                 region=connected.profile.region,
                 tone=connected.profile.tone,
+                mode=connected.profile.mode,
+                context=context,
             )
             translated = result.translated
             emotion = result.emotion
