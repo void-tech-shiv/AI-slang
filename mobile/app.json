@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "AI Slang",
+    "slug": "ai-slang",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "android": {
+      "package": "com.voidtechshiv.aislang",
+      "versionCode": 1
+    },
+    "extra": {
+      "projectPhase": "6"
+    }
+  }
+}
