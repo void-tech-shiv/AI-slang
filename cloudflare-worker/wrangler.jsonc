@@ -3,6 +3,7 @@
   "name": "ai-slang-api",
   "main": "src/worker.js",
   "compatibility_date": "2026-10-17",
+  "compatibility_flags": ["nodejs_compat"],
   "ai": { "binding": "AI" },
   "durable_objects": {
     "bindings": [
@@ -12,5 +13,8 @@
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["ChatRoom"] }
   ],
+  "secrets": {
+    "required": ["MONGODB_URI"]
+  },
   "observability": { "enabled": true }
 }
