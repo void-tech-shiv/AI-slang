@@ -20,54 +20,39 @@ function page() {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI Slang</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:system-ui;background:#0b0b12;color:#fff}main{max-width:720px;margin:auto;padding:24px}.card{background:#151522;border:1px solid #2a2a3d;border-radius:24px;padding:20px;margin:16px 0}h1{font-size:34px;margin:8px 0}.muted{color:#9797aa}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}textarea,input,select,button{width:100%;border-radius:14px;border:1px solid #34344b;background:#0f0f18;color:#fff;padding:13px;font-size:15px}textarea{min-height:110px}button{background:#fff;color:#111;font-weight:800;border:0}.out{font-size:22px;font-weight:700;min-height:54px}.msg{padding:10px 12px;border-radius:14px;background:#202033;margin:8px 0}.tiny{font-size:12px;color:#8f8fa5}@media(max-width:600px){.grid{grid-template-columns:1fr}main{padding:16px}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui;background:#0b0b12;color:#fff}main{max-width:720px;margin:auto;padding:20px}.card{background:#151522;border:1px solid #2a2a3d;border-radius:24px;padding:20px;margin:16px 0}h1{font-size:34px;margin:8px 0}.muted{color:#9797aa}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}input,select,button{width:100%;border-radius:14px;border:1px solid #34344b;background:#0f0f18;color:#fff;padding:13px;font-size:15px}button{background:#fff;color:#111;font-weight:800;border:0}.msg{padding:11px 13px;border-radius:14px;background:#202033;margin:8px 0}.tiny{font-size:12px;color:#8f8fa5}.label{font-size:12px;color:#aaaabd;margin:4px 0 6px}.chatbox{max-height:46vh;overflow:auto;margin:14px 0}.status{margin-top:12px}@media(max-width:600px){.grid{grid-template-columns:1fr}main{padding:14px}}
 </style>
 </head>
 <body>
 <main>
-<div class="tiny">CLOUDFLARE WORKERS AI • LIVE</div>
+<div class="tiny">AI SLANG • LIVE CHAT</div>
 <h1>AI Slang 🔥</h1>
-<p class="muted">Translate like locals actually talk.</p>
+<p class="muted">You speak your way. They read it their way.</p>
 <section class="card">
-<h2>Translator</h2>
-<textarea id="text">Bhai kya scene hai?</textarea>
+<h2>Your Chat Style</h2>
 <div class="grid">
-<select id="lang"><option>Telugu</option><option>Hindi</option><option>Hinglish</option><option>English</option></select>
-<select id="region"><option>Vijayawada</option><option>Hyderabad</option><option>Delhi</option><option>Mumbai</option><option>General</option></select>
-<select id="tone"><option>slang</option><option>casual</option><option>gen-z</option><option>funny</option><option>romantic</option></select>
-<select id="mode"><option>standard</option><option>couple</option><option>gaming</option><option>meme</option></select>
+<div><div class="label">Your name</div><input id="displayName" value="Shiv" placeholder="Your name"></div>
+<div><div class="label">Preferred language</div><select id="lang"><option>Telugu</option><option>Hindi</option><option>Hinglish</option><option>English</option></select></div>
+<div><div class="label">Area / local style</div><select id="region"><option>Vijayawada</option><option>Hyderabad</option><option>Delhi</option><option>Mumbai</option><option>Bihar</option><option>General</option></select></div>
+<div><div class="label">Slang / tone</div><select id="tone"><option>slang</option><option>casual</option><option>gen-z</option><option>funny</option><option>romantic</option></select></div>
+<div><div class="label">Conversation mode</div><select id="mode"><option>standard</option><option>couple</option><option>gaming</option><option>meme</option></select></div>
+<div><div class="label">Room code</div><input id="room" value="train-demo" placeholder="Room code"></div>
 </div><br>
-<button id="translateBtn">Translate →</button>
-<p id="status" class="tiny"></p>
-<div id="out" class="out"></div>
+<button id="joinBtn">Join Chat</button>
+<div id="joinStatus" class="tiny status">Set your style and join the same room as your friend.</div>
 </section>
 <section class="card">
-<h2>Live Room Chat</h2>
-<div class="grid">
-<input id="displayName" value="Shiv" placeholder="Your name">
-<input id="room" value="train-demo" placeholder="Room code">
-</div><br>
-<button id="joinBtn">Join room</button>
-<div id="chat"></div>
-<div class="grid">
-<input id="msg" placeholder="Type message">
-<button id="sendBtn">Send</button>
-</div>
-<p class="tiny">Open same link on another phone/tab, use same room code, choose receiver language above, then chat.</p>
+<h2>Chat</h2>
+<div id="chat" class="chatbox"></div>
+<div class="grid"><input id="msg" placeholder="Type message"><button id="sendBtn">Send</button></div>
+<p class="tiny">Messages are automatically translated for each receiver using their own language, area and slang preferences.</p>
 </section>
 </main>
 <script>
 const $=id=>document.getElementById(id);
 let ws=null;
 let connectionId=0;
-function add(m){const d=document.createElement('div');d.className='msg';d.textContent=m;$('chat').appendChild(d);}
-async function go(){
-  $('status').textContent='Translating…';$('out').textContent='';
-  try{
-    const r=await fetch('/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:$('text').value,source_language:'Auto',target_language:$('lang').value,region:$('region').value,tone:$('tone').value,mode:$('mode').value})});
-    const d=await r.json();$('out').textContent=d.translated||d.detail||'Translation failed';$('status').textContent=d.provider||'';
-  }catch(e){$('status').textContent='Failed';}
-}
+function add(m){const d=document.createElement('div');d.className='msg';d.textContent=m;$('chat').appendChild(d);$('chat').scrollTop=$('chat').scrollHeight;}
 function join(){
   const current=++connectionId;
   if(ws){ws.onopen=ws.onmessage=ws.onerror=ws.onclose=null;try{ws.close();}catch{}}
@@ -76,14 +61,14 @@ function join(){
   const roomCode=$('room').value.trim()||'default';
   const proto=location.protocol==='https:'?'wss':'ws';
   const q=new URLSearchParams({name:displayName,language:$('lang').value,region:$('region').value,tone:$('tone').value,mode:$('mode').value});
+  $('joinStatus').textContent='Connecting…';
   ws=new WebSocket(proto+'://'+location.host+'/ws/chat/'+encodeURIComponent(roomCode)+'?'+q.toString());
-  ws.onopen=()=>{if(current===connectionId)add('Connected ✓ as '+displayName);};
+  ws.onopen=()=>{if(current===connectionId){$('joinStatus').textContent='Connected ✓ as '+displayName;add('Connected ✓');}};
   ws.onmessage=e=>{if(current!==connectionId)return;const d=JSON.parse(e.data);if(d.type==='message')add((d.sender||'Anonymous')+': '+(d.translated||d.original||''));else if(d.message)add(d.message);};
-  ws.onerror=()=>{if(current===connectionId)add('Connection error');};
-  ws.onclose=()=>{if(current===connectionId)ws=null;};
+  ws.onerror=()=>{if(current===connectionId){$('joinStatus').textContent='Connection error';add('Connection error');}};
+  ws.onclose=()=>{if(current===connectionId){ws=null;$('joinStatus').textContent='Disconnected';}};
 }
-function sendMsg(){const value=$('msg').value.trim();if(ws&&ws.readyState===1&&value){ws.send(JSON.stringify({text:value}));$('msg').value='';}}
-$('translateBtn').addEventListener('click',go);
+function sendMsg(){const value=$('msg').value.trim();if(ws&&ws.readyState===1&&value){ws.send(JSON.stringify({text:value}));$('msg').value='';}else if(!ws){$('joinStatus').textContent='Join a room first';}}
 $('joinBtn').addEventListener('click',join);
 $('sendBtn').addEventListener('click',sendMsg);
 $('msg').addEventListener('keydown',e=>{if(e.key==='Enter')sendMsg();});
@@ -128,9 +113,7 @@ export class ChatRoom {
   }
 
   async fetch(request) {
-    if (request.headers.get("Upgrade") !== "websocket") {
-      return new Response("Expected WebSocket", { status: 426 });
-    }
+    if (request.headers.get("Upgrade") !== "websocket") return new Response("Expected WebSocket", { status: 426 });
     const url = new URL(request.url);
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
@@ -154,11 +137,8 @@ export class ChatRoom {
 
   async webSocketMessage(sender, message) {
     let payload;
-    try {
-      payload = JSON.parse(typeof message === "string" ? message : new TextDecoder().decode(message));
-    } catch {
-      return;
-    }
+    try { payload = JSON.parse(typeof message === "string" ? message : new TextDecoder().decode(message)); }
+    catch { return; }
     const text = String(payload.text || "").trim().slice(0, 1000);
     if (!text) return;
     const senderProfile = sender.deserializeAttachment() || { name: "Anonymous" };
