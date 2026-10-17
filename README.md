@@ -121,11 +121,15 @@ Response shape:
 ## Phase roadmap
 
 - **Phase 1:** translator MVP ✅
-- **Phase 2:** real-time 1-to-1 chat with WebSockets
+- **Phase 2:** real-time 1-to-1 chat with per-receiver translation ✅
 - **Phase 3:** users, auth, chat history, preferences
 - **Phase 4:** voice translation
 - **Phase 5:** couple mode, gaming mode, regional slang packs
 - **Phase 6:** Android app using the same backend
+
+## Phase 2 real-time demo
+
+Open `http://localhost:3000/chat` in two tabs. Join the same room with different language/region preferences. Messages are translated independently for each receiver.
 
 ## Security
 
