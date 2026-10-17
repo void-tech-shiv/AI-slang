@@ -9,7 +9,7 @@ const cors = {
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json", ...cors },
+    headers: { "Content-Type": "application/json; charset=utf-8", ...cors },
   });
 }
 
@@ -17,10 +17,11 @@ function page() {
   return `<!doctype html>
 <html>
 <head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI Slang</title>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:system-ui;background:#0b0b12;color:#fff}main{max-width:720px;margin:auto;padding:20px}.card{background:#151522;border:1px solid #2a2a3d;border-radius:24px;padding:20px;margin:16px 0}h1{font-size:34px;margin:8px 0}.muted{color:#9797aa}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}input,select,button{width:100%;border-radius:14px;border:1px solid #34344b;background:#0f0f18;color:#fff;padding:13px;font-size:15px}button{background:#fff;color:#111;font-weight:800;border:0}.msg{padding:11px 13px;border-radius:14px;background:#202033;margin:8px 0}.tiny{font-size:12px;color:#8f8fa5}.label{font-size:12px;color:#aaaabd;margin:4px 0 6px}.chatbox{max-height:46vh;overflow:auto;margin:14px 0}.status{margin-top:12px}@media(max-width:600px){.grid{grid-template-columns:1fr}main{padding:14px}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui;background:#0b0b12;color:#fff}main{max-width:720px;margin:auto;padding:20px}.card{background:#151522;border:1px solid #2a2a3d;border-radius:24px;padding:20px;margin:16px 0}h1{font-size:34px;margin:8px 0}.muted{color:#9797aa}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}input,select,button{width:100%;border-radius:14px;border:1px solid #34344b;background:#0f0f18;color:#fff;padding:13px;font-size:15px}button{background:#fff;color:#111;font-weight:800;border:0}.chatbox{max-height:46vh;overflow:auto;margin:14px 0;display:flex;flex-direction:column;gap:8px}.msg{max-width:86%;padding:11px 13px;border-radius:16px;background:#202033;white-space:pre-wrap;word-break:break-word}.mine{align-self:flex-end;background:#303047}.theirs{align-self:flex-start}.system{align-self:center;max-width:95%;background:transparent;color:#9797aa;font-size:12px;padding:4px 8px}.sender{display:block;font-size:11px;color:#b8b8c9;margin-bottom:4px}.tiny{font-size:12px;color:#8f8fa5}.label{font-size:12px;color:#aaaabd;margin:4px 0 6px}.status{margin-top:12px}@media(max-width:600px){.grid{grid-template-columns:1fr}main{padding:14px}}
 </style>
 </head>
 <body>
@@ -52,20 +53,24 @@ function page() {
 const $=id=>document.getElementById(id);
 let ws=null;
 let connectionId=0;
-function add(m){const d=document.createElement('div');d.className='msg';d.textContent=m;$('chat').appendChild(d);$('chat').scrollTop=$('chat').scrollHeight;}
+let lastPresence='';
+let lastPresenceAt=0;
+function addSystem(text){const d=document.createElement('div');d.className='system';d.textContent=text;$('chat').appendChild(d);$('chat').scrollTop=$('chat').scrollHeight;}
+function addMessage(d){const box=document.createElement('div');const mine=d.provider==='local';box.className='msg '+(mine?'mine':'theirs');const sender=document.createElement('span');sender.className='sender';sender.textContent=mine?'You':(d.sender||'Anonymous');const body=document.createElement('span');body.textContent=d.translated||d.original||'';box.appendChild(sender);box.appendChild(body);$('chat').appendChild(box);$('chat').scrollTop=$('chat').scrollHeight;}
 function join(){
   const current=++connectionId;
-  if(ws){ws.onopen=ws.onmessage=ws.onerror=ws.onclose=null;try{ws.close();}catch{}}
+  if(ws){ws.onopen=ws.onmessage=ws.onerror=ws.onclose=null;try{ws.close(1000,'rejoin');}catch{}}
   $('chat').innerHTML='';
+  lastPresence='';lastPresenceAt=0;
   const displayName=$('displayName').value.trim()||'Anonymous';
   const roomCode=$('room').value.trim()||'default';
   const proto=location.protocol==='https:'?'wss':'ws';
   const q=new URLSearchParams({name:displayName,language:$('lang').value,region:$('region').value,tone:$('tone').value,mode:$('mode').value});
-  $('joinStatus').textContent='Connecting…';
+  $('joinStatus').textContent='Connecting...';
   ws=new WebSocket(proto+'://'+location.host+'/ws/chat/'+encodeURIComponent(roomCode)+'?'+q.toString());
-  ws.onopen=()=>{if(current===connectionId){$('joinStatus').textContent='Connected ✓ as '+displayName;add('Connected ✓');}};
-  ws.onmessage=e=>{if(current!==connectionId)return;const d=JSON.parse(e.data);if(d.type==='message')add((d.sender||'Anonymous')+': '+(d.translated||d.original||''));else if(d.message)add(d.message);};
-  ws.onerror=()=>{if(current===connectionId){$('joinStatus').textContent='Connection error';add('Connection error');}};
+  ws.onopen=()=>{if(current===connectionId){$('joinStatus').textContent='Connected as '+displayName;addSystem('Connected');}};
+  ws.onmessage=e=>{if(current!==connectionId)return;const d=JSON.parse(e.data);if(d.type==='message'){addMessage(d);return;}if(d.type==='presence'&&d.message){const now=Date.now();if(d.message===lastPresence&&now-lastPresenceAt<2500)return;lastPresence=d.message;lastPresenceAt=now;addSystem(d.message);return;}if(d.message)addSystem(d.message);};
+  ws.onerror=()=>{if(current===connectionId){$('joinStatus').textContent='Connection error';addSystem('Connection error');}};
   ws.onclose=()=>{if(current===connectionId){ws=null;$('joinStatus').textContent='Disconnected';}};
 }
 function sendMsg(){const value=$('msg').value.trim();if(ws&&ws.readyState===1&&value){ws.send(JSON.stringify({text:value}));$('msg').value='';}else if(!ws){$('joinStatus').textContent='Join a room first';}}
@@ -79,12 +84,15 @@ $('msg').addEventListener('keydown',e=>{if(e.key==='Enter')sendMsg();});
 
 function promptFor({ source_language = "Auto", target_language = "Telugu", region = "General", tone = "slang", mode = "standard", context = [] }) {
   return [
-    "You are AI Slang, an Indian local-conversation translator.",
-    "Translate like real young locals talk, not textbook language.",
-    "Preserve emotion, slang, sarcasm, jokes, intensity and emojis.",
-    "Never explain. Return only the translated message.",
+    "You are a translation engine, NOT a chatbot and NOT the recipient of the message.",
+    "Your only job is to translate or locally restyle the exact user message for the receiver.",
+    "Never answer the message. Never continue the conversation. Never add new facts, questions, advice, reactions, or intentions that were not in the source.",
+    "Preserve the original meaning, speaker perspective, names, intent, emotion, slang, sarcasm, jokes, intensity and emojis.",
+    "Use natural Indian youth language for the requested target language, regional style and tone. Avoid textbook language.",
+    "If source and target are already similar, only restyle naturally; do not invent a reply.",
+    "Return ONLY the translated/restyled message with no explanation, label or quotation marks.",
     `Source: ${source_language}. Target: ${target_language}. Region/style: ${region}. Tone: ${tone}. Conversation mode: ${mode}.`,
-    context?.length ? `Recent context: ${context.slice(-6).join(" | ")}` : "",
+    context?.length ? `Recent context is for disambiguation only, never for replying: ${context.slice(-6).join(" | ")}` : "",
   ].filter(Boolean).join("\n");
 }
 
@@ -94,7 +102,7 @@ async function translate(env, payload) {
   const result = await env.AI.run(MODEL, {
     messages: [
       { role: "system", content: promptFor(payload) },
-      { role: "user", content: text },
+      { role: "user", content: `Translate this exact message without replying to it:\n${text}` },
     ],
   });
   const translated = (result && (result.response || result.result?.response)) || "";
@@ -176,7 +184,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
-    if (url.pathname === "/" && request.method === "GET") return new Response(page(), { headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-store" } });
+    if (url.pathname === "/" && request.method === "GET") return new Response(page(), { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
     if (url.pathname === "/api" && request.method === "GET") return json({ message: "AI Slang Cloudflare API", status: "live", runtime: "workers-ai", chat: "durable-objects" });
     if (url.pathname === "/health" && request.method === "GET") return json({ status: "ok", runtime: "cloudflare" });
     if (url.pathname === "/translate" && request.method === "POST") {
